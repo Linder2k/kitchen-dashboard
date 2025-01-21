@@ -15,16 +15,16 @@
             flex-direction: column;
             align-items: center;
             justify-content: flex-start;
-            height: 100vh; /* Anpassa till fältets höjd */
+            height: 100vh;
             overflow: hidden;
         }
         #clock {
-            font-size: 4vw; /* Klockans storlek anpassas */
+            font-size: 4vw;
             margin: 10px 0;
         }
         canvas {
-            width: 90%; /* Diagrammet tar upp större delen av fältet */
-            height: 70%; /* Anpassar höjden */
+            width: 90%;
+            height: 70%;
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -34,27 +34,13 @@
     <canvas id="spotChart"></canvas>
 
     <script>
-        // Klockan i centrum
-        function updateClock() {
-            const now = new Date();
-            const timeString = now.toLocaleTimeString("sv-SE", {
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-            });
-            document.getElementById("clock").innerText = timeString;
-        }
-        setInterval(updateClock, 1000);
-        updateClock();
-
-        // Funktion för att hämta spotpriser från Tibber
         async function fetchSpotPrices() {
             try {
                 const response = await fetch("https://api.tibber.com/v1-beta/gql", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        Authorization: "Bearer 9206C763895009AF27F63245EF938C44A4D1E174D179E916613ADD4D1A009A36", // Klistra in ditt Tibber API-token här
+                        Authorization: "Bearer linder12345", // KLIPP IN TOKEN HÄR
                     },
                     body: JSON.stringify({
                         query: `
@@ -80,29 +66,34 @@
                     }),
                 });
 
-                // Kontrollera om förfrågan lyckades
+                // Kontrollera HTTP-status
                 if (!response.ok) {
-                    throw new Error("Kunde inte hämta Tibber-data");
+                    throw new Error(`HTTP-fel: ${response.status}`);
                 }
 
                 const data = await response.json();
+
+                // Kontrollera om data finns
+                if (!data || !data.viewer || !data.viewer.homes) {
+                    throw new Error("Ogiltig data från Tibber");
+                }
+
                 const pricesToday = data.viewer.homes[0].currentSubscription.priceInfo.today;
                 const currentPrice = data.viewer.homes[0].currentSubscription.priceInfo.current;
 
                 const labels = pricesToday.map((p) =>
                     new Date(p.startsAt).toLocaleTimeString("sv-SE", { hour: "2-digit" })
                 );
-                const values = pricesToday.map((p) => p.total * 100); // Konvertera till öre
+                const values = pricesToday.map((p) => p.total * 100);
                 const currentHour = new Date(currentPrice.startsAt).getHours();
 
                 drawChart(labels, values, currentHour);
             } catch (error) {
-                document.getElementById("clock").innerText = "Fel vid hämtning av Tibber-data";
-                console.error("Fel vid hämtning av Tibber-data:", error);
+                document.getElementById("clock").innerText = "Fel vid hämtning av Tibber-data.";
+                console.error("Felkod:", error);
             }
         }
 
-        // Funktion för att rita diagrammet med Chart.js
         function drawChart(labels, data, currentHour) {
             const ctx = document.getElementById("spotChart").getContext("2d");
             new Chart(ctx, {
@@ -124,47 +115,21 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false,
-                        },
-                    },
                     scales: {
                         x: {
-                            grid: {
-                                color: "rgba(255, 255, 255, 0.1)",
-                            },
-                            ticks: {
-                                color: "orange",
-                            },
+                            ticks: { color: "orange" },
+                            grid: { color: "rgba(255, 255, 255, 0.1)" },
                         },
                         y: {
                             beginAtZero: true,
-                            grid: {
-                                color: "rgba(255, 255, 255, 0.1)",
-                            },
-                            ticks: {
-                                color: "orange",
-                            },
+                            ticks: { color: "orange" },
+                            grid: { color: "rgba(255, 255, 255, 0.1)" },
                         },
                     },
                 },
             });
         }
 
-        // Skydda källkoden genom att blockera inspektion
-        document.addEventListener("keydown", function (event) {
-            if (
-                event.key === "F12" || // Blockera utvecklarverktyg
-                (event.ctrlKey && event.shiftKey && event.key === "I") || // Blockera Ctrl+Shift+I
-                (event.ctrlKey && event.key === "U") // Blockera Ctrl+U (Visa källa)
-            ) {
-                event.preventDefault();
-                alert("Inspektion av källkoden är inaktiverad.");
-            }
-        });
-
-        // Hämta data vid sidladdning
         fetchSpotPrices();
     </script>
 </body>
