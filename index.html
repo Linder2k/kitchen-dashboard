@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Startsida</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000; /* Svart bakgrund */
+            color: orange; /* Orange text */
+            font-family: Arial, sans-serif;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 3 kolumner */
+            grid-template-rows: repeat(2, 1fr); /* 2 rader */
+            height: 100vh; /* Full höjd */
+            gap: 2px; /* Mellanrum mellan fälten */
+        }
+        .field {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid orange;
+            text-decoration: none;
+            font-size: 20px;
+        }
+        .field:hover {
+            background-color: orange;
+            color: black;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <a href="page1.html" class="field">1</a>
+    <a href="page2.html" class="field">2</a>
+    <a href="page3.html" class="field">3</a>
+    <a href="page4.html" class="field">4</a>
+    <a href="page5.html" class="field">5</a>
+    <a href="page6.html" class="field">6</a>
+</body>
+</html>
