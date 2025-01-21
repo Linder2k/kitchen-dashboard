@@ -7,24 +7,37 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            text-align: center;
-            background-color: #f4f4f9;
-            color: #333;
+            background-color: #000; /* Svart bakgrund */
+            color: orange; /* Orange text */
             margin: 0;
             padding: 0;
         }
-        h1 {
-            margin-top: 20px;
+        #header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 50px;
+            box-sizing: border-box;
         }
-        .content {
-            margin: 20px;
+        #title {
+            margin: 0;
+            font-size: 24px;
+            text-align: left;
+        }
+        #clock {
+            font-size: 20px;
+            text-align: left;
         }
     </style>
 </head>
 <body>
-    <h1>Linder</h1>
-    <div class="content">
-
+    <div id="header">
+        <h1 id="title">Linder</h1>
         <p id="clock"></p>
     </div>
     <script>
