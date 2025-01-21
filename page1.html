@@ -18,84 +18,56 @@
             height: 100vh;
             overflow: hidden;
         }
-        #clock {
-            font-size: 4vw;
-            margin: 10px 0;
+        #currentPrice {
+            font-size: 5vw; /* Storlek på aktuellt pris */
+            margin: 20px 0;
         }
         canvas {
             width: 90%;
-            height: 70%;
+            height: 60%;
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div id="clock">Laddar klocka...</div>
-    <canvas id="spotChart"></canvas>
+    <div id="currentPrice">Laddar pris...</div>
+    <canvas id="priceChart"></canvas>
 
     <script>
         async function fetchSpotPrices() {
             try {
-                const response = await fetch("https://api.tibber.com/v1-beta/gql", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: "Bearer linder12345", // KLIPP IN TOKEN HÄR
-                    },
-                    body: JSON.stringify({
-                        query: `
-                        {
-                            viewer {
-                                homes {
-                                    currentSubscription {
-                                        priceInfo {
-                                            today {
-                                                total
-                                                startsAt
-                                            }
-                                            current {
-                                                total
-                                                startsAt
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        `,
-                    }),
-                });
-
-                // Kontrollera HTTP-status
-                if (!response.ok) {
-                    throw new Error(`HTTP-fel: ${response.status}`);
-                }
-
+                // Hämta dagens priser för SE3 från elprisetjustnu.se
+                const response = await fetch("https://www.elprisetjustnu.se/api/v1/prices/2025/01-21_SE3.json");
+                if (!response.ok) throw new Error("Kunde inte hämta data.");
                 const data = await response.json();
 
-                // Kontrollera om data finns
-                if (!data || !data.viewer || !data.viewer.homes) {
-                    throw new Error("Ogiltig data från Tibber");
+                // Omvandla data till ett diagram
+                const labels = data.map((price) => price.time_start.substring(11, 16)); // Tid, ex: 08:00
+                const values = data.map((price) => price.value); // Priser i öre/kWh
+                const currentTime = new Date().getHours();
+                const currentPrice = data.find((price) =>
+                    new Date(price.time_start).getHours() === currentTime
+                );
+
+                // Visa aktuellt pris
+                const currentPriceElement = document.getElementById("currentPrice");
+                if (currentPrice) {
+                    currentPriceElement.innerText = `Aktuellt pris: ${currentPrice.value} öre/kWh`;
+                } else {
+                    currentPriceElement.innerText = "Aktuellt pris ej tillgängligt.";
                 }
 
-                const pricesToday = data.viewer.homes[0].currentSubscription.priceInfo.today;
-                const currentPrice = data.viewer.homes[0].currentSubscription.priceInfo.current;
-
-                const labels = pricesToday.map((p) =>
-                    new Date(p.startsAt).toLocaleTimeString("sv-SE", { hour: "2-digit" })
-                );
-                const values = pricesToday.map((p) => p.total * 100);
-                const currentHour = new Date(currentPrice.startsAt).getHours();
-
-                drawChart(labels, values, currentHour);
+                // Rita diagrammet
+                drawChart(labels, values, currentTime);
             } catch (error) {
-                document.getElementById("clock").innerText = "Fel vid hämtning av Tibber-data.";
-                console.error("Felkod:", error);
+                document.getElementById("currentPrice").innerText = "Fel vid hämtning av prisdata.";
+                console.error(error);
             }
         }
 
+        // Rita stapeldiagrammet med dagens priser
         function drawChart(labels, data, currentHour) {
-            const ctx = document.getElementById("spotChart").getContext("2d");
+            const ctx = document.getElementById("priceChart").getContext("2d");
             new Chart(ctx, {
                 type: "bar",
                 data: {
@@ -115,21 +87,25 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                    },
                     scales: {
                         x: {
-                            ticks: { color: "orange" },
                             grid: { color: "rgba(255, 255, 255, 0.1)" },
+                            ticks: { color: "orange" },
                         },
                         y: {
                             beginAtZero: true,
-                            ticks: { color: "orange" },
                             grid: { color: "rgba(255, 255, 255, 0.1)" },
+                            ticks: { color: "orange" },
                         },
                     },
                 },
             });
         }
 
+        // Hämta data och visa
         fetchSpotPrices();
     </script>
 </body>
