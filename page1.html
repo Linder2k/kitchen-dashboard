@@ -54,7 +54,7 @@
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        Authorization: "Bearer CeY3R--IZsBKIimUAwRIH36EAZTPnVUS5siCYREzOD0", // Ditt Tibber API-token
+                        Authorization: "Bearer 9206C763895009AF27F63245EF938C44A4D1E174D179E916613ADD4D1A009A36", // Klistra in ditt Tibber API-token här
                     },
                     body: JSON.stringify({
                         query: `
@@ -79,6 +79,12 @@
                         `,
                     }),
                 });
+
+                // Kontrollera om förfrågan lyckades
+                if (!response.ok) {
+                    throw new Error("Kunde inte hämta Tibber-data");
+                }
+
                 const data = await response.json();
                 const pricesToday = data.viewer.homes[0].currentSubscription.priceInfo.today;
                 const currentPrice = data.viewer.homes[0].currentSubscription.priceInfo.current;
@@ -145,6 +151,18 @@
                 },
             });
         }
+
+        // Skydda källkoden genom att blockera inspektion
+        document.addEventListener("keydown", function (event) {
+            if (
+                event.key === "F12" || // Blockera utvecklarverktyg
+                (event.ctrlKey && event.shiftKey && event.key === "I") || // Blockera Ctrl+Shift+I
+                (event.ctrlKey && event.key === "U") // Blockera Ctrl+U (Visa källa)
+            ) {
+                event.preventDefault();
+                alert("Inspektion av källkoden är inaktiverad.");
+            }
+        });
 
         // Hämta data vid sidladdning
         fetchSpotPrices();
