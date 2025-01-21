@@ -33,13 +33,33 @@
             font-size: 20px;
             text-align: left;
         }
+        #content {
+            margin: 60px 20px 20px;
+        }
+        #prices {
+            margin-top: 20px;
+            text-align: left;
+        }
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+        }
     </style>
 </head>
 <body>
+    <!-- Header med titel och klocka -->
     <div id="header">
         <h1 id="title">Linder</h1>
         <p id="clock"></p>
     </div>
+
+    <!-- Innehåll -->
+    <div id="content">
+        <h2>Dagens elpriser (öre/kWh)</h2>
+        <div id="prices">Laddar priser...</div>
+    </div>
+
     <script>
         // Uppdatera klockan
         function updateClock() {
@@ -49,6 +69,30 @@
         }
         setInterval(updateClock, 1000);
         updateClock();
+
+        // Hämta dagens elpriser från elprisetjustnu.se
+        async function fetchSpotPrices() {
+            try {
+                const response = await fetch('https://www.elprisetjustnu.se/api/v1/prices/2025/01-21_SE1.json'); // Justera URL:en efter behov
+                const data = await response.json();
+
+                const pricesContainer = document.getElementById("prices");
+                pricesContainer.innerHTML = ''; // Rensa laddningstexten
+
+                data.forEach(price => {
+                    const row = document.createElement('div');
+                    row.classList.add('price-row');
+                    row.innerHTML = `<span>${price.time_start.substring(11, 16)}</span><span>${price.SE1} öre/kWh</span>`;
+                    pricesContainer.appendChild(row);
+                });
+            } catch (error) {
+                document.getElementById("prices").innerText = "Kunde inte hämta priser.";
+                console.error("Fel vid hämtning av priser:", error);
+            }
+        }
+
+        // Hämta priser vid sidladdning
+        fetchSpotPrices();
     </script>
 </body>
 </html>
