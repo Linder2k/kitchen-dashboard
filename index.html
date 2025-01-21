@@ -16,12 +16,13 @@
             grid-template-rows: repeat(2, 1fr); /* 2 rader */
             height: 100vh; /* Full höjd */
             gap: 10px; /* Mellanrum mellan fälten */
+            overflow: hidden; /* Ingen rullning på huvudskärmen */
         }
         .field {
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow: hidden;
+            overflow: hidden; /* Undvik rullistor i varje fält */
             background-color: #222; /* Mörkgrå bakgrund för "dynan" */
             border-radius: 10px; /* Rundade hörn */
             box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.5), /* Nedre skugga */
@@ -31,6 +32,7 @@
             width: 100%;
             height: 100%;
             border: none;
+            transform: scale(0.95); /* Förminska lite för att undvika rullistor */
         }
         .field:hover {
             transform: scale(1.02); /* Lite större när muspekaren är över */
