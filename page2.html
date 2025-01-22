@@ -38,16 +38,17 @@
                 const apiKey = "DIN_API_NYCKEL"; // Sätt din OpenWeatherMap API-nyckel här
                 const city = "Norrtälje";
                 const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&lang=sv&appid=${apiKey}`);
-                if (!response.ok) throw new Error("Kunde inte hämta väderdata.");
                 
+                if (!response.ok) {
+                    console.error("Fel vid API-anrop:", response.status, response.statusText);
+                    throw new Error("Kunde inte hämta väderdata.");
+                }
+
                 const data = await response.json();
-                
-                // Hämta relevanta data
-                const temperature = Math.round(data.main.temp); // Temperatur i °C
-                const weatherDescription = data.weather[0].description; // Väderbeskrivning
-                const windSpeed = Math.round(data.wind.speed); // Vindhastighet i m/s
-                
-                // Visa väderdata på sidan
+                const temperature = Math.round(data.main.temp);
+                const weatherDescription = data.weather[0].description;
+                const windSpeed = Math.round(data.wind.speed);
+
                 const weatherElement = document.getElementById("weather");
                 weatherElement.innerHTML = `
                     <p>Temperatur: ${temperature}°C</p>
@@ -60,7 +61,6 @@
             }
         }
 
-        // Hämta väderdata vid sidladdning
         fetchWeather();
     </script>
 </body>
