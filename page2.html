@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Väder - Norrtälje</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            color: orange;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        h1 {
+            font-size: 4vw;
+            margin-bottom: 20px;
+        }
+        #weather {
+            font-size: 3vw;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Vädret i Norrtälje</h1>
+    <div id="weather">Laddar väderdata...</div>
+
+    <script>
+        async function fetchWeather() {
+            try {
+                const apiKey = "DIN_API_NYCKEL"; // Sätt din OpenWeatherMap API-nyckel här
+                const city = "Norrtälje";
+                const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&lang=sv&appid=${apiKey}`);
+                if (!response.ok) throw new Error("Kunde inte hämta väderdata.");
+                
+                const data = await response.json();
+                
+                // Hämta relevanta data
+                const temperature = Math.round(data.main.temp); // Temperatur i °C
+                const weatherDescription = data.weather[0].description; // Väderbeskrivning
+                const windSpeed = Math.round(data.wind.speed); // Vindhastighet i m/s
+                
+                // Visa väderdata på sidan
+                const weatherElement = document.getElementById("weather");
+                weatherElement.innerHTML = `
+                    <p>Temperatur: ${temperature}°C</p>
+                    <p>Väder: ${weatherDescription.charAt(0).toUpperCase() + weatherDescription.slice(1)}</p>
+                    <p>Vind: ${windSpeed} m/s</p>
+                `;
+            } catch (error) {
+                document.getElementById("weather").innerText = "Fel vid hämtning av väderdata.";
+                console.error(error);
+            }
+        }
+
+        // Hämta väderdata vid sidladdning
+        fetchWeather();
+    </script>
+</body>
+</html>
