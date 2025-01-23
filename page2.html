@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Väder - Norrtälje</title>
+    <title>Väder i Norrtälje</title>
     <style>
         body {
             margin: 0;
@@ -18,52 +18,18 @@
             height: 100vh;
             overflow: hidden;
         }
-        h1 {
-            font-size: 4vw;
-            margin-bottom: 20px;
-        }
-        #weather {
-            font-size: 3vw;
-            text-align: center;
+        iframe {
+            border: none;
+            width: 100%;
+            height: 100%;
         }
     </style>
 </head>
 <body>
     <h1>Vädret i Norrtälje</h1>
-    <div id="weather">Laddar väderdata...</div>
-
-    <script>
-        async function fetchWeather() {
-            const apiKey = "DIN_API_NYCKEL"; // Sätt din OpenWeatherMap API-nyckel här
-            const city = "Norrtälje";
-
-            try {
-                const response = await fetch(`https://cors-anywhere.herokuapp.com/https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&lang=sv&appid=${apiKey}`);
-                
-                if (!response.ok) {
-                    console.error(`Fel vid API-anrop: ${response.status} ${response.statusText}`);
-                    document.getElementById("weather").innerText = "Kunde inte hämta data.";
-                    return;
-                }
-
-                const data = await response.json();
-                console.log("API-svar:", data); // Loggar hela API-svaret till konsolen
-
-                // Visa temperatur och väderbeskrivning
-                const temperature = Math.round(data.main.temp);
-                const weatherDescription = data.weather[0].description;
-
-                document.getElementById("weather").innerHTML = `
-                    <p>Temperatur: ${temperature}°C</p>
-                    <p>Väder: ${weatherDescription}</p>
-                `;
-            } catch (error) {
-                document.getElementById("weather").innerText = "Ett fel inträffade vid hämtning av väderdata.";
-                console.error("Fel vid hämtning:", error);
-            }
-        }
-
-        fetchWeather();
-    </script>
+    <iframe 
+        src="https://www.klart.se/widget/sweden/stockholm/norrtälje?hideTop=true&theme=dark" 
+        title="Vädret i Norrtälje">
+    </iframe>
 </body>
 </html>
