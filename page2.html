@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Väderprognos för Norrtälje</title>
+    <title>Norrtälje</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -38,7 +38,7 @@
     </style>
 </head>
 <body>
-    <h1>Vädret i Norrtälje</h1>
+    <h1>Norrtälje</h1>
     <div id="currentWeather">Hämtar väderdata...</div>
     <div id="forecast"></div>
 
@@ -82,27 +82,41 @@
                     currentWeatherElement.innerText = 'Ingen aktuell väderprognos tillgänglig.';
                 }
 
-                // Hämta dagens prognos (nästa 12 timmar)
-                const todayForecast = timeSeries.filter(forecast => {
-                    const forecastTime = new Date(forecast.validTime);
-                    return forecastTime.getDate() === now.getDate() && forecastTime > now;
-                }).slice(0, 4); // Begränsa till max 4 prognoser (varje prognos är 3 timmar)
+                // Tidsintervall: förmiddag, lunch, eftermiddag, kväll, natt
+                const intervals = {
+                    "Förmiddag": [6, 12],
+                    "Lunch": [12, 15],
+                    "Eftermiddag": [15, 18],
+                    "Kväll": [18, 24],
+                    "Natt": [0, 6]
+                };
 
                 forecastElement.innerHTML = ''; // Rensa tidigare prognos
-                todayForecast.forEach(forecast => {
-                    const forecastTime = new Date(forecast.validTime);
-                    const parameters = forecast.parameters;
-                    const temperature = parameters.find(param => param.name === 't').values[0];
-                    const weatherSymbol = parameters.find(param => param.name === 'Wsymb2').values[0];
+                for (const [label, [startHour, endHour]] of Object.entries(intervals)) {
+                    const intervalForecast = timeSeries.find(forecast => {
+                        const forecastTime = new Date(forecast.validTime).getHours();
+                        return forecastTime >= startHour && forecastTime < endHour;
+                    });
 
-                    const timeString = forecastTime.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
-                    forecastElement.innerHTML += `
-                        <div class="forecast-item">
-                            <img src="https://www.smhi.se/assets/images/weather-symbols/${weatherSymbol}.svg" alt="Vädersymbol">
-                            <span>${timeString}: ${temperature}°C, ${getWeatherDescription(weatherSymbol)}</span>
-                        </div>
-                    `;
-                });
+                    if (intervalForecast) {
+                        const parameters = intervalForecast.parameters;
+                        const temperature = parameters.find(param => param.name === 't').values[0];
+                        const weatherSymbol = parameters.find(param => param.name === 'Wsymb2').values[0];
+
+                        forecastElement.innerHTML += `
+                            <div class="forecast-item">
+                                <img src="images/${weatherSymbol}.svg" alt="Vädersymbol">
+                                <span>${label}: ${temperature}°C, ${getWeatherDescription(weatherSymbol)}</span>
+                            </div>
+                        `;
+                    } else {
+                        forecastElement.innerHTML += `
+                            <div class="forecast-item">
+                                <span>${label}: Ingen data tillgänglig</span>
+                            </div>
+                        `;
+                    }
+                }
             } else {
                 currentWeatherElement.innerText = 'Ingen väderdata tillgänglig.';
             }
