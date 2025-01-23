@@ -9,30 +9,38 @@
             font-family: Arial, sans-serif;
             background-color: #000;
             color: orange;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
             margin: 0;
-        }
-        #weather {
-            background-color: #111;
             padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(255, 165, 0, 0.5);
-            text-align: center;
         }
         h1 {
-            margin-bottom: 20px;
+            font-size: 3vw;
+            margin-bottom: 10px;
+        }
+        #currentWeather {
+            font-size: 2.5vw;
+            margin-bottom: 30px;
+        }
+        #forecast {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .forecast-item {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            font-size: 2vw;
+        }
+        .forecast-item img {
+            width: 50px;
+            height: 50px;
         }
     </style>
 </head>
 <body>
-    <div id="weather">
-        <h1>Väderprognos för Norrtälje</h1>
-        <p id="forecast">Hämtar väderdata...</p>
-    </div>
+    <h1>Vädret i Norrtälje</h1>
+    <div id="currentWeather">Hämtar väderdata...</div>
+    <div id="forecast"></div>
 
     <script>
         async function fetchWeather() {
@@ -46,35 +54,57 @@
                 const data = await response.json();
                 displayWeather(data);
             } catch (error) {
-                document.getElementById('forecast').innerText = 'Kunde inte hämta väderdata.';
+                document.getElementById('currentWeather').innerText = 'Kunde inte hämta väderdata.';
                 console.error('Fel vid hämtning av väderdata:', error);
             }
         }
 
         function displayWeather(data) {
+            const currentWeatherElement = document.getElementById('currentWeather');
             const forecastElement = document.getElementById('forecast');
             const timeSeries = data.timeSeries;
 
             if (timeSeries && timeSeries.length > 0) {
                 const now = new Date();
-                const currentForecast = timeSeries.find(forecast => new Date(forecast.validTime) > now);
 
+                // Hämta aktuell prognos
+                const currentForecast = timeSeries.find(forecast => new Date(forecast.validTime) > now);
                 if (currentForecast) {
                     const parameters = currentForecast.parameters;
                     const temperature = parameters.find(param => param.name === 't').values[0];
                     const windSpeed = parameters.find(param => param.name === 'ws').values[0];
                     const weatherSymbol = parameters.find(param => param.name === 'Wsymb2').values[0];
 
-                    forecastElement.innerHTML = `
-                        <p>Temperatur: ${temperature}°C</p>
-                        <p>Vind: ${windSpeed} m/s</p>
-                        <p>Väder: ${getWeatherDescription(weatherSymbol)}</p>
+                    currentWeatherElement.innerHTML = `
+                        <p>Just nu: ${temperature}°C, ${getWeatherDescription(weatherSymbol)}. Vind: ${windSpeed} m/s</p>
                     `;
                 } else {
-                    forecastElement.innerText = 'Ingen aktuell väderprognos tillgänglig.';
+                    currentWeatherElement.innerText = 'Ingen aktuell väderprognos tillgänglig.';
                 }
+
+                // Hämta dagens prognos (nästa 12 timmar)
+                const todayForecast = timeSeries.filter(forecast => {
+                    const forecastTime = new Date(forecast.validTime);
+                    return forecastTime.getDate() === now.getDate() && forecastTime > now;
+                }).slice(0, 4); // Begränsa till max 4 prognoser (varje prognos är 3 timmar)
+
+                forecastElement.innerHTML = ''; // Rensa tidigare prognos
+                todayForecast.forEach(forecast => {
+                    const forecastTime = new Date(forecast.validTime);
+                    const parameters = forecast.parameters;
+                    const temperature = parameters.find(param => param.name === 't').values[0];
+                    const weatherSymbol = parameters.find(param => param.name === 'Wsymb2').values[0];
+
+                    const timeString = forecastTime.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+                    forecastElement.innerHTML += `
+                        <div class="forecast-item">
+                            <img src="https://www.smhi.se/assets/images/weather-symbols/${weatherSymbol}.svg" alt="Vädersymbol">
+                            <span>${timeString}: ${temperature}°C, ${getWeatherDescription(weatherSymbol)}</span>
+                        </div>
+                    `;
+                });
             } else {
-                forecastElement.innerText = 'Ingen väderdata tillgänglig.';
+                currentWeatherElement.innerText = 'Ingen väderdata tillgänglig.';
             }
         }
 
@@ -111,11 +141,8 @@
             return descriptions[symbol] || 'Okänt väder';
         }
 
-        // Hämta väderdata vid sidladdning
         fetchWeather();
-
-        // Uppdatera sidan automatiskt var 30:e minut (30 minuter = 1800000 millisekunder)
-        setInterval(fetchWeather, 1800000);
+        setInterval(fetchWeather, 1800000); // Uppdatera varje 30:e minut
     </script>
 </body>
 </html>
