@@ -34,6 +34,7 @@
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
 </head>
 <body>
     <div id="datetime"></div>
@@ -52,14 +53,23 @@
             document.getElementById('datetime').innerText = `${formattedDate} ${formattedTime}`;
         }
 
-        // Funktion för att hämta elpriser
+        // Funktion för att hämta och beräkna elpriser
         async function fetchElectricityPrices() {
-            // Här bör du implementera logik för att hämta aktuella elpriser för SE3
-            // För demonstration används statiska data
-            return [
-                56.70, 45.24, 43.40, 43.40, 43.37, 43.72, 103.74, 153.30, 177.98, 161.54, 132.82, 125.57,
-                106.25, 96.88, 83.76, 74.72, 95.41, 102.30, 93.20, 78.48, 61.83, 46.18, 30.24, 29.07
-            ];
+            try {
+                const response = await fetch('https://www.elprisetjustnu.se/api/v1/prices/2025/01-23_SE3.json');
+                if (!response.ok) {
+                    throw new Error("Kunde inte hämta elpriser.");
+                }
+                const data = await response.json();
+
+                // Hämta priser och lägg till skatter och påslag (i öre)
+                return data.map(price => {
+                    return (price.value * 10) + 53.6; // Spotpris + skatter/påslag
+                });
+            } catch (error) {
+                console.error(error);
+                return Array(24).fill(0); // Om fel uppstår, returnera nollpriser
+            }
         }
 
         // Funktion för att uppdatera grafen och visa aktuellt elpris
@@ -70,7 +80,7 @@
             const currentPrice = prices[currentHour];
 
             // Uppdatera texten med aktuellt elpris
-            document.getElementById('currentPrice').innerText = `Elpriset just nu: ${currentPrice.toFixed(2)} öre/kWh`;
+            document.getElementById('currentPrice').innerText = `Elpriset just nu: ${currentPrice.toFixed(1)} öre/kWh`;
 
             // Skapa eller uppdatera grafen
             const ctx = document.getElementById('priceChart').getContext('2d');
@@ -137,7 +147,7 @@
                                         borderColor: 'red',
                                         borderWidth: 2,
                                         label: {
-                                            content: 'Nuvarande tid',
+                                            content: 'Nuvarande timme',
                                             enabled: true,
                                             position: 'top'
                                         }
@@ -152,8 +162,7 @@
 
         // Uppdatera datum och tid vid sidladdning
         updateDateTime();
-        // Uppdatera datum och tid varje minut
-        setInterval(updateDateTime, 60000);
+        setInterval(updateDateTime, 60000); // Uppdatera varje minut
 
         // Uppdatera grafen vid sidladdning
         updateChart();
@@ -162,7 +171,7 @@
         const msToNextHour = ((60 - now.getMinutes()) * 60 - now.getSeconds()) * 1000;
         setTimeout(() => {
             updateChart();
-            setInterval(updateChart, 3600000);
+            setInterval(updateChart, 3600000); // Uppdatera varje timme
         }, msToNextHour);
     </script>
 </body>
