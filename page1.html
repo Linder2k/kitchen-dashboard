@@ -27,6 +27,11 @@
             width: 90%;
             height: 70%;
         }
+        #currentPrice {
+            font-size: 2.5vw;
+            margin: 10px 0;
+            text-align: center;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -35,6 +40,7 @@
     <div id="chartContainer">
         <canvas id="priceChart"></canvas>
     </div>
+    <div id="currentPrice"></div>
 
     <script>
         // Funktion för att uppdatera datum och tid
@@ -46,65 +52,118 @@
             document.getElementById('datetime').innerText = `${formattedDate} ${formattedTime}`;
         }
 
+        // Funktion för att hämta elpriser
+        async function fetchElectricityPrices() {
+            // Här bör du implementera logik för att hämta aktuella elpriser för SE3
+            // För demonstration används statiska data
+            return [
+                56.70, 45.24, 43.40, 43.40, 43.37, 43.72, 103.74, 153.30, 177.98, 161.54, 132.82, 125.57,
+                106.25, 96.88, 83.76, 74.72, 95.41, 102.30, 93.20, 78.48, 61.83, 46.18, 30.24, 29.07
+            ];
+        }
+
+        // Funktion för att uppdatera grafen och visa aktuellt elpris
+        async function updateChart() {
+            const prices = await fetchElectricityPrices();
+            const now = new Date();
+            const currentHour = now.getHours();
+            const currentPrice = prices[currentHour];
+
+            // Uppdatera texten med aktuellt elpris
+            document.getElementById('currentPrice').innerText = `Elpriset just nu: ${currentPrice.toFixed(2)} öre/kWh`;
+
+            // Skapa eller uppdatera grafen
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            if (window.priceChart) {
+                window.priceChart.data.datasets[0].data = prices;
+                window.priceChart.options.plugins.annotation.annotations.line1.value = currentHour;
+                window.priceChart.update();
+            } else {
+                window.priceChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: [
+                            '00:00', '01:00', '02:00', '03:00', '04:00', '05:00', '06:00', '07:00',
+                            '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00',
+                            '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00'
+                        ],
+                        datasets: [{
+                            label: 'Elpris SE3 (inkl. skatter och påslag)',
+                            data: prices,
+                            borderColor: 'orange',
+                            backgroundColor: 'rgba(255, 165, 0, 0.2)',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Tid på dygnet',
+                                    color: 'orange'
+                                },
+                                ticks: {
+                                    color: 'orange'
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Pris (öre/kWh)',
+                                    color: 'orange'
+                                },
+                                ticks: {
+                                    color: 'orange'
+                                },
+                                beginAtZero: true
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            annotation: {
+                                annotations: {
+                                    line1: {
+                                        type: 'line',
+                                        scaleID: 'x',
+                                        value: currentHour,
+                                        borderColor: 'red',
+                                        borderWidth: 2,
+                                        label: {
+                                            content: 'Nuvarande tid',
+                                            enabled: true,
+                                            position: 'top'
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
         // Uppdatera datum och tid vid sidladdning
         updateDateTime();
         // Uppdatera datum och tid varje minut
         setInterval(updateDateTime, 60000);
 
-        // Data för elpriser (exempeldata)
-        const hours = ['00:00', '01:00', '02:00', '03:00', '04:00', '05:00', '06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00'];
-        const prices = [0.35, 0.30, 0.28, 0.25, 0.27, 0.29, 0.32, 0.40, 0.45, 0.50, 0.55, 0.60, 0.58, 0.57, 0.56, 0.55, 0.60, 0.65, 0.70, 0.68, 0.60, 0.50, 0.45, 0.40]; // Priser i SEK/kWh
-
-        // Skapa linjediagrammet
-        const ctx = document.getElementById('priceChart').getContext('2d');
-        const priceChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: hours,
-                datasets: [{
-                    label: 'Elpris SE3 (inkl. skatter och påslag)',
-                    data: prices,
-                    borderColor: 'orange',
-                    backgroundColor: 'rgba(255, 165, 0, 0.2)',
-                    borderWidth: 2,
-                    pointRadius: 0,
-                    fill: true,
-                    tension: 0.4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'Tid på dygnet',
-                            color: 'orange'
-                        },
-                        ticks: {
-                            color: 'orange'
-                        }
-                    },
-                    y: {
-                        title: {
-                            display: true,
-                            text: 'Pris (SEK/kWh)',
-                            color: 'orange'
-                        },
-                        ticks: {
-                            color: 'orange'
-                        },
-                        beginAtZero: true
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                }
-            }
-        });
+        // Uppdatera grafen vid sidladdning
+        updateChart();
+        // Uppdatera grafen varje hel timme
+        const now = new Date();
+        const msToNextHour = ((60 - now.getMinutes()) * 60 - now.getSeconds()) * 1000;
+        setTimeout(() => {
+            updateChart();
+            setInterval(updateChart, 3600000);
+        }, msToNextHour);
     </script>
 </body>
 </html>
