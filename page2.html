@@ -3,33 +3,119 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Väder i Norrtälje</title>
+    <title>Väderprognos för Norrtälje</title>
     <style>
         body {
-            margin: 0;
-            padding: 0;
+            font-family: Arial, sans-serif;
             background-color: #000;
             color: orange;
-            font-family: Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100vh;
-            overflow: hidden;
+            margin: 0;
         }
-        iframe {
-            border: none;
-            width: 100%;
-            height: 100%;
+        #weather {
+            background-color: #111;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(255, 165, 0, 0.5);
+            text-align: center;
+        }
+        h1 {
+            margin-bottom: 20px;
         }
     </style>
 </head>
 <body>
-    <h1>Vädret i Norrtälje</h1>
-    <iframe 
-        src="https://www.klart.se/widget/sweden/stockholm/norrtälje?hideTop=true&theme=dark" 
-        title="Vädret i Norrtälje">
-    </iframe>
+    <div id="weather">
+        <h1>Väderprognos för Norrtälje</h1>
+        <p id="forecast">Hämtar väderdata...</p>
+    </div>
+
+    <script>
+        async function fetchWeather() {
+            const url = 'https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/18.7043/lat/59.7577/data.json';
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP-fel! Status: ${response.status}`);
+                }
+                const data = await response.json();
+                displayWeather(data);
+            } catch (error) {
+                document.getElementById('forecast').innerText = 'Kunde inte hämta väderdata.';
+                console.error('Fel vid hämtning av väderdata:', error);
+            }
+        }
+
+        function displayWeather(data) {
+            const forecastElement = document.getElementById('forecast');
+            const timeSeries = data.timeSeries;
+
+            if (timeSeries && timeSeries.length > 0) {
+                const now = new Date();
+                const currentForecast = timeSeries.find(forecast => new Date(forecast.validTime) > now);
+
+                if (currentForecast) {
+                    const parameters = currentForecast.parameters;
+                    const temperature = parameters.find(param => param.name === 't').values[0];
+                    const windSpeed = parameters.find(param => param.name === 'ws').values[0];
+                    const weatherSymbol = parameters.find(param => param.name === 'Wsymb2').values[0];
+
+                    forecastElement.innerHTML = `
+                        <p>Temperatur: ${temperature}°C</p>
+                        <p>Vind: ${windSpeed} m/s</p>
+                        <p>Väder: ${getWeatherDescription(weatherSymbol)}</p>
+                    `;
+                } else {
+                    forecastElement.innerText = 'Ingen aktuell väderprognos tillgänglig.';
+                }
+            } else {
+                forecastElement.innerText = 'Ingen väderdata tillgänglig.';
+            }
+        }
+
+        function getWeatherDescription(symbol) {
+            const descriptions = {
+                1: 'Klart',
+                2: 'Lätt molnighet',
+                3: 'Halvklart',
+                4: 'Molnigt',
+                5: 'Mycket moln',
+                6: 'Mulet',
+                7: 'Dimma',
+                8: 'Lätt regnskur',
+                9: 'Regnskur',
+                10: 'Kraftig regnskur',
+                11: 'Åskskur',
+                12: 'Lätt by av regn och snö',
+                13: 'By av regn och snö',
+                14: 'Kraftig by av regn och snö',
+                15: 'Lätt snöby',
+                16: 'Snöby',
+                17: 'Kraftig snöby',
+                18: 'Lätt regn',
+                19: 'Regn',
+                20: 'Kraftigt regn',
+                21: 'Åska',
+                22: 'Lätt snöblandat regn',
+                23: 'Snöblandat regn',
+                24: 'Kraftigt snöblandat regn',
+                25: 'Lätt snöfall',
+                26: 'Snöfall',
+                27: 'Kraftigt snöfall'
+            };
+            return descriptions[symbol] || 'Okänt väder';
+        }
+
+        // Hämta väderdata vid sidladdning
+        fetchWeather();
+
+        // Uppdatera sidan automatiskt var 30:e minut (30 minuter = 1800000 millisekunder)
+        setInterval(fetchWeather, 1800000);
+    </script>
 </body>
 </html>
