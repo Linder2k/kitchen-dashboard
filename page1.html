@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spotpris SE3</title>
+    <title>Elpris SE3</title>
     <style>
         body {
-            margin: 0;
-            padding: 0;
+            font-family: Arial, sans-serif;
             background-color: #000;
             color: orange;
-            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -18,118 +18,93 @@
             height: 100vh;
             overflow: hidden;
         }
-        #clock {
-            font-size: 4vw; /* Klockans storlek */
-            margin: 10px 0;
-        }
-        #currentPrice {
-            font-size: 5vw; /* Aktuellt pris */
+        #datetime {
+            font-size: 3vw;
             margin: 20px 0;
+            text-align: center;
         }
-        canvas {
+        #chartContainer {
             width: 90%;
-            height: 60%;
+            height: 70%;
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div id="clock">Laddar klocka...</div>
-    <div id="currentPrice">Laddar pris...</div>
-    <canvas id="priceChart"></canvas>
+    <div id="datetime"></div>
+    <div id="chartContainer">
+        <canvas id="priceChart"></canvas>
+    </div>
 
     <script>
-        // Klocka i realtid
-        function updateClock() {
+        // Funktion för att uppdatera datum och tid
+        function updateDateTime() {
             const now = new Date();
-            const timeString = now.toLocaleTimeString("sv-SE", {
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-            });
-            document.getElementById("clock").innerText = `Klockan: ${timeString}`;
+            const options = { weekday: 'long', day: '2-digit', month: 'long' };
+            const formattedDate = now.toLocaleDateString('sv-SE', options);
+            const formattedTime = now.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('datetime').innerText = `${formattedDate} ${formattedTime}`;
         }
-        setInterval(updateClock, 1000);
-        updateClock();
 
-        // Funktion för att hämta spotpriser
-        async function fetchSpotPrices() {
-            try {
-                // Hämta dagens priser för SE3
-                const today = new Date().toISOString().split("T")[0]; // Dagens datum i format yyyy-mm-dd
-                const response = await fetch(`https://www.elprisetjustnu.se/api/v1/prices/${today}_SE3.json`);
-                if (!response.ok) throw new Error("Kunde inte hämta data.");
+        // Uppdatera datum och tid vid sidladdning
+        updateDateTime();
+        // Uppdatera datum och tid varje minut
+        setInterval(updateDateTime, 60000);
 
-                const data = await response.json();
+        // Data för elpriser (exempeldata)
+        const hours = ['00:00', '01:00', '02:00', '03:00', '04:00', '05:00', '06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00'];
+        const prices = [0.35, 0.30, 0.28, 0.25, 0.27, 0.29, 0.32, 0.40, 0.45, 0.50, 0.55, 0.60, 0.58, 0.57, 0.56, 0.55, 0.60, 0.65, 0.70, 0.68, 0.60, 0.50, 0.45, 0.40]; // Priser i SEK/kWh
 
-                // Tidsbaserad data
-                const labels = data.map((price) => price.time_start.substring(11, 16)); // Tid, ex: 08:00
-                const values = data.map((price) => price.value); // Priser i öre/kWh
-
-                // Hitta aktuellt pris
-                const currentHour = new Date().getHours();
-                const currentPrice = data.find(
-                    (price) => new Date(price.time_start).getHours() === currentHour
-                );
-
-                // Visa aktuellt pris
-                const currentPriceElement = document.getElementById("currentPrice");
-                if (currentPrice) {
-                    currentPriceElement.innerText = `Aktuellt pris: ${currentPrice.value} öre/kWh`;
-                } else {
-                    currentPriceElement.innerText = "Aktuellt pris ej tillgängligt.";
+        // Skapa linjediagrammet
+        const ctx = document.getElementById('priceChart').getContext('2d');
+        const priceChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: hours,
+                datasets: [{
+                    label: 'Elpris SE3 (inkl. skatter och påslag)',
+                    data: prices,
+                    borderColor: 'orange',
+                    backgroundColor: 'rgba(255, 165, 0, 0.2)',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Tid på dygnet',
+                            color: 'orange'
+                        },
+                        ticks: {
+                            color: 'orange'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Pris (SEK/kWh)',
+                            color: 'orange'
+                        },
+                        ticks: {
+                            color: 'orange'
+                        },
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
                 }
-
-                // Rita diagrammet
-                drawChart(labels, values, currentHour);
-            } catch (error) {
-                document.getElementById("currentPrice").innerText = "Fel vid hämtning av prisdata.";
-                console.error("Fel:", error);
             }
-        }
-
-        // Rita diagrammet med dagens priser
-        function drawChart(labels, data, currentHour) {
-            const ctx = document.getElementById("priceChart").getContext("2d");
-            new Chart(ctx, {
-                type: "bar",
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: "Spotpris (öre/kWh)",
-                            data: data,
-                            backgroundColor: labels.map((_, i) =>
-                                i === currentHour ? "orange" : "rgba(255, 165, 0, 0.7)"
-                            ),
-                            borderColor: "orange",
-                            borderWidth: 1,
-                        },
-                    ],
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                    },
-                    scales: {
-                        x: {
-                            grid: { color: "rgba(255, 255, 255, 0.1)" },
-                            ticks: { color: "orange" },
-                        },
-                        y: {
-                            beginAtZero: true,
-                            grid: { color: "rgba(255, 255, 255, 0.1)" },
-                            ticks: { color: "orange" },
-                        },
-                    },
-                },
-            });
-        }
-
-        // Starta hämtningsprocessen
-        fetchSpotPrices();
+        });
     </script>
 </body>
 </html>
