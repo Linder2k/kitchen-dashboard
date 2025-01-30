@@ -44,7 +44,7 @@
     <div id="currentPrice">Hämtar elpris...</div>
 
     <script>
-        // Uppdatera tid och datum
+        // 🕒 Uppdatera tid och datum
         function updateDateTime() {
             const now = new Date();
             const options = { weekday: 'long', day: '2-digit', month: 'long' };
@@ -53,44 +53,38 @@
             document.getElementById('datetime').innerText = `${formattedDate} ${formattedTime}`;
         }
 
-        // Hämta elpriser från den exakta API-länken
+        // ⚡ Hämta elpriser från API
         async function fetchElectricityPrices() {
-            const url = "https://www.elprisetjustnu.se/api/v1/prices/2025/01-30_SE3.json";
+            const url = "https://www.elprisetjustnu.se/api/v1/prices/2025/01-30_SE3.json"; // 🔥 Korrekt API-länk
 
             try {
                 const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error(`HTTP-fel! Status: ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`HTTP-fel! Status: ${response.status}`);
                 const data = await response.json();
-                return data.map(item => parseFloat(item.SE_per_kWh) * 100); // Konvertera till öre
+
+                return data.map(item => parseFloat(item.SE_per_kWh) * 100); // Spotpris i öre
             } catch (error) {
-                console.error('Fel vid hämtning av elpriser:', error);
-                return null; // Om API:t misslyckas returneras null
+                console.error('❌ Fel vid hämtning av elpriser:', error);
+                return Array(24).fill(0); // Om API:t misslyckas, fyll med 0
             }
         }
 
-        // Uppdatera grafen och visa aktuellt elpris
+        // 📊 Uppdatera grafen och visa aktuellt elpris
         async function updateChart() {
-            let prices = await fetchElectricityPrices();
-            if (!prices || prices.some(isNaN)) {
-                document.getElementById('currentPrice').innerText = 'Kunde inte hämta elpriser.';
-                prices = Array(24).fill(0); // Om inget pris hittas, fyll med 0
-            }
-
+            const prices = await fetchElectricityPrices();
             const now = new Date();
             const currentHour = now.getHours();
             const currentPrice = prices[currentHour] || 0; // Om fel, visa 0 öre
 
-            // Uppdatera texten med aktuellt elpris
+            // 🔥 Uppdatera texten med aktuellt elpris
             document.getElementById('currentPrice').innerText = `${currentPrice.toFixed(1)} öre/kWh`;
 
-            // Skapa eller uppdatera grafen
+            // 📈 Skapa eller uppdatera grafen
             const ctx = document.getElementById('priceChart').getContext('2d');
             if (window.priceChart) {
                 window.priceChart.data.datasets[0].data = prices;
                 window.priceChart.data.datasets[0].backgroundColor = prices.map((_, index) =>
-                    index === currentHour ? 'orange' : 'gray'
+                    index === currentHour ? 'red' : 'gray'
                 );
                 window.priceChart.update();
             } else {
@@ -102,7 +96,7 @@
                             label: 'Elpris SE3 (SEK öre/kWh)',
                             data: prices,
                             backgroundColor: prices.map((_, index) =>
-                                index === currentHour ? 'orange' : 'gray'
+                                index === currentHour ? 'red' : 'gray'
                             ),
                             borderColor: 'white',
                             borderWidth: 1
@@ -113,50 +107,36 @@
                         maintainAspectRatio: false,
                         scales: {
                             x: {
-                                title: {
-                                    display: true,
-                                    text: 'Tid på dygnet',
-                                    color: 'orange'
-                                },
-                                ticks: {
-                                    color: 'orange'
-                                }
+                                title: { display: true, text: 'Tid på dygnet', color: 'orange' },
+                                ticks: { color: 'orange' }
                             },
                             y: {
-                                title: {
-                                    display: true,
-                                    text: 'Pris (öre/kWh)',
-                                    color: 'orange'
-                                },
-                                ticks: {
-                                    color: 'orange'
-                                },
+                                title: { display: true, text: 'Pris (öre/kWh)', color: 'orange' },
+                                ticks: { color: 'orange' },
                                 beginAtZero: true
                             }
                         },
                         plugins: {
-                            legend: {
-                                display: false
-                            }
+                            legend: { display: false }
                         }
                     }
                 });
             }
         }
 
-        // Uppdatera datum och tid vid sidladdning
+        // ⏰ Uppdatera tid vid sidladdning
         updateDateTime();
-        setInterval(updateDateTime, 60000); // Uppdatera varje minut
+        setInterval(updateDateTime, 60000); // Varje minut
 
-        // Uppdatera grafen vid sidladdning
+        // 🔄 Uppdatera grafen vid sidladdning
         updateChart();
-        // Uppdatera grafen varje hel och halv timme
+        // 🔄 Uppdatera grafen varje hel och halv timme
         const now = new Date();
         const minutes = now.getMinutes();
         const msToNextUpdate = ((30 - (minutes % 30)) * 60 - now.getSeconds()) * 1000;
         setTimeout(() => {
             updateChart();
-            setInterval(updateChart, 1800000); // Uppdatera varje 30:e minut
+            setInterval(updateChart, 1800000); // Var 30:e minut
         }, msToNextUpdate);
     </script>
 </body>
