@@ -44,7 +44,7 @@
     <div id="currentPrice"></div>
 
     <script>
-        // Funktion för att uppdatera datum och tid
+        // Uppdaterar datum och tid
         function updateDateTime() {
             const now = new Date();
             const options = { weekday: 'long', day: '2-digit', month: 'long' };
@@ -53,31 +53,42 @@
             document.getElementById('datetime').innerText = `${formattedDate} ${formattedTime}`;
         }
 
-        // Funktion för att hämta och beräkna elpriser
+        // Hämta elpriser från Nord Pool
         async function fetchElectricityPrices() {
+            const url = 'https://www.nordpoolgroup.com/api/marketdata/page/10?currency=SEK&endDate=2025-01-30';
             try {
-                const response = await fetch('https://www.elprisetjustnu.se/api/v1/prices/2025/01-23_SE3.json');
+                const response = await fetch(url);
                 if (!response.ok) {
-                    throw new Error("Kunde inte hämta elpriser.");
+                    throw new Error(`HTTP-fel! Status: ${response.status}`);
                 }
                 const data = await response.json();
-
-                // Hämta priser och lägg till skatter och påslag (i öre)
-                return data.map(price => {
-                    return (price.value * 10) + 53.6; // Spotpris + skatter/påslag
-                });
+                const prices = data.data.Rows.filter(row => row.IsExtraRow === false)
+                    .map(row => parseFloat(row.Columns[1].Value.replace(',', '.')));
+                return prices;
             } catch (error) {
-                console.error(error);
-                return Array(24).fill(0); // Om fel uppstår, returnera nollpriser
+                console.error('Fel vid hämtning av elpriser:', error);
+                return Array(24).fill(0); // Returnera nollpriser vid fel
             }
         }
 
-        // Funktion för att uppdatera grafen och visa aktuellt elpris
+        // Beräkna totalpriset inklusive påslag och skatter
+        function calculateTotalPrices(spotPrices) {
+            const tibberPaslag = 8.6; // Tibbers påslag i öre/kWh
+            const energiskattOchMoms = 45.0; // Energiskatt och moms i öre/kWh
+            return spotPrices.map(price => price + tibberPaslag + energiskattOchMoms);
+        }
+
+        // Uppdatera grafen och visa aktuellt elpris
         async function updateChart() {
-            const prices = await fetchElectricityPrices();
+            const spotPrices = await fetchElectricityPrices();
+            if (!spotPrices) {
+                document.getElementById('currentPrice').innerText = 'Kunde inte hämta elpriser.';
+                return;
+            }
+            const totalPrices = calculateTotalPrices(spotPrices);
             const now = new Date();
             const currentHour = now.getHours();
-            const currentPrice = prices[currentHour];
+            const currentPrice = totalPrices[currentHour];
 
             // Uppdatera texten med aktuellt elpris
             document.getElementById('currentPrice').innerText = `Elpriset just nu: ${currentPrice.toFixed(1)} öre/kWh`;
@@ -85,8 +96,8 @@
             // Skapa eller uppdatera grafen
             const ctx = document.getElementById('priceChart').getContext('2d');
             if (window.priceChart) {
-                window.priceChart.data.datasets[0].data = prices;
-                window.priceChart.options.plugins.annotation.annotations.line1.value = currentHour;
+                window.priceChart.data.datasets[0].data = totalPrices;
+                window.priceChart.options.plugins.annotation.annotations.currentTimeLine.value = currentHour;
                 window.priceChart.update();
             } else {
                 window.priceChart = new Chart(ctx, {
@@ -99,7 +110,7 @@
                         ],
                         datasets: [{
                             label: 'Elpris SE3 (inkl. skatter och påslag)',
-                            data: prices,
+                            data: totalPrices,
                             borderColor: 'orange',
                             backgroundColor: 'rgba(255, 165, 0, 0.2)',
                             borderWidth: 2,
@@ -140,7 +151,7 @@
                             },
                             annotation: {
                                 annotations: {
-                                    line1: {
+                                    currentTimeLine: {
                                         type: 'line',
                                         scaleID: 'x',
                                         value: currentHour,
