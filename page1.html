@@ -28,9 +28,10 @@
             height: 70%;
         }
         #currentPrice {
-            font-size: 2.5vw;
-            margin: 10px 0;
+            font-size: 3vw;
+            font-weight: bold;
             text-align: center;
+            margin-top: 10px;
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -40,7 +41,7 @@
     <div id="chartContainer">
         <canvas id="priceChart"></canvas>
     </div>
-    <div id="currentPrice"></div>
+    <div id="currentPrice">Hämtar elpris...</div>
 
     <script>
         // Uppdaterar datum och tid
@@ -54,8 +55,11 @@
 
         // Hämta elpriser från Elpriset Just Nu
         async function fetchElectricityPrices() {
-            const today = new Date().toISOString().split('T')[0];
-            const url = `https://www.elprisetjustnu.se/api/v1/prices/${today.replace(/-/g, '/')}_SE3.json`;
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const url = `https://www.elprisetjustnu.se/api/v1/prices/${year}/${month}-${day}_SE3.json`;
 
             try {
                 const response = await fetch(url);
@@ -63,12 +67,10 @@
                     throw new Error(`HTTP-fel! Status: ${response.status}`);
                 }
                 const data = await response.json();
-                const prices = data.map(item => item.SE_per_kWh * 100); // Konvertera till öre/kWh
-                return prices;
+                return data.map(item => item.SE_per_kWh * 100); // Konvertera till öre/kWh
             } catch (error) {
                 console.error('Fel vid hämtning av elpriser:', error);
-                document.getElementById('currentPrice').innerText = 'Kunde inte hämta elpriser.';
-                return null;
+                return null; // Returnera null om hämtning misslyckas
             }
         }
 
@@ -76,13 +78,16 @@
         function calculateTotalPrices(spotPrices) {
             const tibberPaslag = 8.6; // Tibbers påslag i öre/kWh
             const energiskatt = 54.875; // Energiskatt i öre/kWh från 1 januari 2025
-            return spotPrices.map(price => (price + tibberPaslag + energiskatt) * 1.25);
+            return spotPrices.map(price => (price + tibberPaslag + energiskatt));
         }
 
         // Uppdatera grafen och visa aktuellt elpris
         async function updateChart() {
-            const spotPrices = await fetchElectricityPrices();
-            if (!spotPrices) return; // Om det blir fel, gör ingenting
+            let spotPrices = await fetchElectricityPrices();
+            if (!spotPrices) {
+                document.getElementById('currentPrice').innerText = 'Kunde inte hämta elpriser.';
+                spotPrices = Array(24).fill(0); // Om inget pris hittas, fyll med 0
+            }
 
             const totalPrices = calculateTotalPrices(spotPrices);
             const now = new Date();
@@ -90,7 +95,7 @@
             const currentPrice = totalPrices[currentHour];
 
             // Uppdatera texten med aktuellt elpris
-            document.getElementById('currentPrice').innerText = `Elpriset just nu: ${currentPrice.toFixed(1)} öre/kWh`;
+            document.getElementById('currentPrice').innerText = `${currentPrice.toFixed(1)} öre/kWh`;
 
             // Skapa eller uppdatera grafen
             const ctx = document.getElementById('priceChart').getContext('2d');
