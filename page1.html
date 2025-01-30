@@ -53,13 +53,9 @@
             document.getElementById('datetime').innerText = `${formattedDate} ${formattedTime}`;
         }
 
-        // Hämta elpriser från API
+        // Hämta elpriser från den exakta API-länken
         async function fetchElectricityPrices() {
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const day = String(today.getDate()).padStart(2, '0');
-            const url = `https://www.elprisetjustnu.se/api/v1/prices/${year}/${month}-${day}_SE3.json`;
+            const url = "https://www.elprisetjustnu.se/api/v1/prices/2025/01-30_SE3.json";
 
             try {
                 const response = await fetch(url);
@@ -67,32 +63,24 @@
                     throw new Error(`HTTP-fel! Status: ${response.status}`);
                 }
                 const data = await response.json();
-                return data.map(item => parseFloat(item.SE_per_kWh) * 100); // Spotpris i öre
+                return data.map(item => parseFloat(item.SE_per_kWh) * 100); // Konvertera till öre
             } catch (error) {
                 console.error('Fel vid hämtning av elpriser:', error);
                 return null; // Om API:t misslyckas returneras null
             }
         }
 
-        // Beräkna totalpris inklusive Tibbers påslag och skatter
-        function calculateTotalPrices(spotPrices) {
-            const tibberPaslag = 8.6; // Tibbers påslag i öre/kWh
-            const energiskatt = 54.875; // Energiskatt i öre/kWh
-            return spotPrices.map(price => (price + tibberPaslag + energiskatt)); // Totalt pris i öre
-        }
-
         // Uppdatera grafen och visa aktuellt elpris
         async function updateChart() {
-            let spotPrices = await fetchElectricityPrices();
-            if (!spotPrices || spotPrices.some(isNaN)) {
+            let prices = await fetchElectricityPrices();
+            if (!prices || prices.some(isNaN)) {
                 document.getElementById('currentPrice').innerText = 'Kunde inte hämta elpriser.';
-                spotPrices = Array(24).fill(0); // Om inget pris hittas, fyll med 0
+                prices = Array(24).fill(0); // Om inget pris hittas, fyll med 0
             }
 
-            const totalPrices = calculateTotalPrices(spotPrices);
             const now = new Date();
             const currentHour = now.getHours();
-            const currentPrice = totalPrices[currentHour] || 0; // Om fel, visa 0 öre
+            const currentPrice = prices[currentHour] || 0; // Om fel, visa 0 öre
 
             // Uppdatera texten med aktuellt elpris
             document.getElementById('currentPrice').innerText = `${currentPrice.toFixed(1)} öre/kWh`;
@@ -100,9 +88,9 @@
             // Skapa eller uppdatera grafen
             const ctx = document.getElementById('priceChart').getContext('2d');
             if (window.priceChart) {
-                window.priceChart.data.datasets[0].data = totalPrices;
-                window.priceChart.data.datasets[0].backgroundColor = totalPrices.map((_, index) =>
-                    index === currentHour ? 'red' : 'orange'
+                window.priceChart.data.datasets[0].data = prices;
+                window.priceChart.data.datasets[0].backgroundColor = prices.map((_, index) =>
+                    index === currentHour ? 'orange' : 'gray'
                 );
                 window.priceChart.update();
             } else {
@@ -111,12 +99,12 @@
                     data: {
                         labels: Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`),
                         datasets: [{
-                            label: 'Elpris SE3 (inkl. skatter och påslag)',
-                            data: totalPrices,
-                            backgroundColor: totalPrices.map((_, index) =>
-                                index === currentHour ? 'red' : 'orange'
+                            label: 'Elpris SE3 (SEK öre/kWh)',
+                            data: prices,
+                            backgroundColor: prices.map((_, index) =>
+                                index === currentHour ? 'orange' : 'gray'
                             ),
-                            borderColor: 'orange',
+                            borderColor: 'white',
                             borderWidth: 1
                         }]
                     },
