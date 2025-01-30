@@ -34,7 +34,6 @@
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
 </head>
 <body>
     <div id="datetime"></div>
@@ -53,38 +52,38 @@
             document.getElementById('datetime').innerText = `${formattedDate} ${formattedTime}`;
         }
 
-        // Hämta elpriser från Nord Pool
+        // Hämta elpriser från Elpriset Just Nu
         async function fetchElectricityPrices() {
-            const url = 'https://www.nordpoolgroup.com/api/marketdata/page/10?currency=SEK&endDate=2025-01-30';
+            const today = new Date().toISOString().split('T')[0];
+            const url = `https://www.elprisetjustnu.se/api/v1/prices/${today.replace(/-/g, '/')}_SE3.json`;
+
             try {
                 const response = await fetch(url);
                 if (!response.ok) {
                     throw new Error(`HTTP-fel! Status: ${response.status}`);
                 }
                 const data = await response.json();
-                const prices = data.data.Rows.filter(row => row.IsExtraRow === false)
-                    .map(row => parseFloat(row.Columns[1].Value.replace(',', '.')));
+                const prices = data.map(item => item.SE_per_kWh * 100); // Konvertera till öre/kWh
                 return prices;
             } catch (error) {
                 console.error('Fel vid hämtning av elpriser:', error);
-                return Array(24).fill(0); // Returnera nollpriser vid fel
+                document.getElementById('currentPrice').innerText = 'Kunde inte hämta elpriser.';
+                return null;
             }
         }
 
         // Beräkna totalpriset inklusive påslag och skatter
         function calculateTotalPrices(spotPrices) {
             const tibberPaslag = 8.6; // Tibbers påslag i öre/kWh
-            const energiskattOchMoms = 45.0; // Energiskatt och moms i öre/kWh
-            return spotPrices.map(price => price + tibberPaslag + energiskattOchMoms);
+            const energiskatt = 54.875; // Energiskatt i öre/kWh från 1 januari 2025
+            return spotPrices.map(price => (price + tibberPaslag + energiskatt) * 1.25);
         }
 
         // Uppdatera grafen och visa aktuellt elpris
         async function updateChart() {
             const spotPrices = await fetchElectricityPrices();
-            if (!spotPrices) {
-                document.getElementById('currentPrice').innerText = 'Kunde inte hämta elpriser.';
-                return;
-            }
+            if (!spotPrices) return; // Om det blir fel, gör ingenting
+
             const totalPrices = calculateTotalPrices(spotPrices);
             const now = new Date();
             const currentHour = now.getHours();
@@ -97,26 +96,23 @@
             const ctx = document.getElementById('priceChart').getContext('2d');
             if (window.priceChart) {
                 window.priceChart.data.datasets[0].data = totalPrices;
-                window.priceChart.options.plugins.annotation.annotations.currentTimeLine.value = currentHour;
+                window.priceChart.data.datasets[0].backgroundColor = totalPrices.map((_, index) =>
+                    index === currentHour ? 'red' : 'orange'
+                );
                 window.priceChart.update();
             } else {
                 window.priceChart = new Chart(ctx, {
-                    type: 'line',
+                    type: 'bar',
                     data: {
-                        labels: [
-                            '00:00', '01:00', '02:00', '03:00', '04:00', '05:00', '06:00', '07:00',
-                            '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00',
-                            '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00'
-                        ],
+                        labels: Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`),
                         datasets: [{
                             label: 'Elpris SE3 (inkl. skatter och påslag)',
                             data: totalPrices,
+                            backgroundColor: totalPrices.map((_, index) =>
+                                index === currentHour ? 'red' : 'orange'
+                            ),
                             borderColor: 'orange',
-                            backgroundColor: 'rgba(255, 165, 0, 0.2)',
-                            borderWidth: 2,
-                            pointRadius: 0,
-                            fill: true,
-                            tension: 0.4
+                            borderWidth: 1
                         }]
                     },
                     options: {
@@ -148,22 +144,6 @@
                         plugins: {
                             legend: {
                                 display: false
-                            },
-                            annotation: {
-                                annotations: {
-                                    currentTimeLine: {
-                                        type: 'line',
-                                        scaleID: 'x',
-                                        value: currentHour,
-                                        borderColor: 'red',
-                                        borderWidth: 2,
-                                        label: {
-                                            content: 'Nuvarande timme',
-                                            enabled: true,
-                                            position: 'top'
-                                        }
-                                    }
-                                }
                             }
                         }
                     }
@@ -177,13 +157,14 @@
 
         // Uppdatera grafen vid sidladdning
         updateChart();
-        // Uppdatera grafen varje hel timme
+        // Uppdatera grafen varje hel och halv timme
         const now = new Date();
-        const msToNextHour = ((60 - now.getMinutes()) * 60 - now.getSeconds()) * 1000;
+        const minutes = now.getMinutes();
+        const msToNextUpdate = ((30 - (minutes % 30)) * 60 - now.getSeconds()) * 1000;
         setTimeout(() => {
             updateChart();
-            setInterval(updateChart, 3600000); // Uppdatera varje timme
-        }, msToNextHour);
+            setInterval(updateChart, 1800000); // Uppdatera varje 30:e minut
+        }, msToNextUpdate);
     </script>
 </body>
 </html>
