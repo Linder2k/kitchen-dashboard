@@ -64,10 +64,12 @@
                 if (!response.ok) throw new Error(`HTTP-fel! Status: ${response.status}`);
                 const data = await response.json();
 
+                console.log("📊 API-data mottagen:", data); // 🔎 Logga API-datan i konsolen
+
                 return data.map(item => parseFloat(item.SE_per_kWh) * 100); // Spotpris i öre
             } catch (error) {
                 console.error('❌ Fel vid hämtning av elpriser:', error);
-                return Array(24).fill(0); // Om API:t misslyckas, fyll med 0
+                return null; // Returnera null om API:t misslyckas
             }
         }
 
@@ -114,7 +116,14 @@
 
         // 📈 Uppdatera grafen och visa aktuellt elpris
         async function updateChart() {
-            const prices = await fetchElectricityPrices();
+            let prices = await fetchElectricityPrices();
+            
+            // 🔎 Om API:t inte returnerar något, använd testdata
+            if (!prices || prices.length === 0 || prices.some(isNaN)) {
+                console.warn("⚠️ Inga priser från API – använder testdata!");
+                prices = Array.from({ length: 24 }, () => Math.floor(Math.random() * 200)); // Slumpade priser 0-200 öre
+            }
+
             const now = new Date();
             const currentHour = now.getHours();
             const currentPrice = prices[currentHour] || 0; // Om fel, visa 0 öre
