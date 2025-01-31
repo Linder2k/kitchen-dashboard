@@ -44,6 +44,8 @@
     <div id="currentPrice">Hämtar elpris...</div>
 
     <script>
+        let priceChart; // Globala variabeln för grafen
+
         // 🕒 Uppdatera tid och datum
         function updateDateTime() {
             const now = new Date();
@@ -69,7 +71,48 @@
             }
         }
 
-        // 📊 Uppdatera grafen och visa aktuellt elpris
+        // 📊 Skapa grafen första gången
+        function createChart(prices) {
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            const now = new Date();
+            const currentHour = now.getHours();
+
+            priceChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`),
+                    datasets: [{
+                        label: 'Elpris SE3 (öre/kWh)',
+                        data: prices,
+                        backgroundColor: prices.map((_, index) =>
+                            index === currentHour ? 'red' : 'gray'
+                        ),
+                        borderColor: 'white',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Tid på dygnet', color: 'orange' },
+                            ticks: { color: 'orange' }
+                        },
+                        y: {
+                            title: { display: true, text: 'Pris (öre/kWh)', color: 'orange' },
+                            ticks: { color: 'orange' },
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        // 📈 Uppdatera grafen och visa aktuellt elpris
         async function updateChart() {
             const prices = await fetchElectricityPrices();
             const now = new Date();
@@ -79,48 +122,16 @@
             // 🔥 Uppdatera texten med aktuellt elpris
             document.getElementById('currentPrice').innerText = `${currentPrice.toFixed(1)} öre/kWh`;
 
-            // 📈 Skapa eller uppdatera grafen
-            const ctx = document.getElementById('priceChart').getContext('2d');
-            if (window.priceChart) {
-                window.priceChart.data.datasets[0].data = prices;
-                window.priceChart.data.datasets[0].backgroundColor = prices.map((_, index) =>
+            // 🔄 Om grafen redan finns, uppdatera den
+            if (priceChart) {
+                priceChart.data.datasets[0].data = prices;
+                priceChart.data.datasets[0].backgroundColor = prices.map((_, index) =>
                     index === currentHour ? 'red' : 'gray'
                 );
-                window.priceChart.update();
+                priceChart.update();
             } else {
-                window.priceChart = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`),
-                        datasets: [{
-                            label: 'Elpris SE3 (SEK öre/kWh)',
-                            data: prices,
-                            backgroundColor: prices.map((_, index) =>
-                                index === currentHour ? 'red' : 'gray'
-                            ),
-                            borderColor: 'white',
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            x: {
-                                title: { display: true, text: 'Tid på dygnet', color: 'orange' },
-                                ticks: { color: 'orange' }
-                            },
-                            y: {
-                                title: { display: true, text: 'Pris (öre/kWh)', color: 'orange' },
-                                ticks: { color: 'orange' },
-                                beginAtZero: true
-                            }
-                        },
-                        plugins: {
-                            legend: { display: false }
-                        }
-                    }
-                });
+                // 🆕 Skapa grafen om den inte finns
+                createChart(prices);
             }
         }
 
