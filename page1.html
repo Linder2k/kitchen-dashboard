@@ -71,11 +71,13 @@
                 console.log("📊 API-data mottagen:", data);
 
                 return data.map(item => {
-                    let pris = parseFloat(item.SEK_per_kWh) * 100; // Pris i öre/kWh
-                    pris += 8.6; // Tibbers påslag (8,6 öre)
-                    pris += 54.875; // Energiskatt (54,875 öre)
-                    pris *= 1.25; // Lägg på 25% moms
-                    return pris;
+                    let pris = Math.round(parseFloat(item.SEK_per_kWh) * 100); // Pris i öre/kWh
+                    let tibberPaslag = 8.6; // Tibbers påslag i öre/kWh
+                    let energiskatt = 39.2; // Energiskatt i öre/kWh för SE3
+                    let moms = 1.25; // 25% moms
+
+                    let totalpris = Math.round((pris + tibberPaslag + energiskatt) * moms); // Totalt pris i öre
+                    return totalpris;
                 });
             } catch (error) {
                 console.error('❌ Fel vid hämtning av elpriser:', error);
@@ -137,8 +139,8 @@
             const currentHour = now.getHours();
             const currentPrice = prices[currentHour] || 0;
 
-            // 🔥 Uppdatera texten med aktuellt elpris
-            document.getElementById('currentPrice').innerText = `${currentPrice.toFixed(1)} öre/kWh`;
+            // 🔥 Uppdatera texten med aktuellt elpris (utan decimaler)
+            document.getElementById('currentPrice').innerText = `${currentPrice} öre/kWh`;
 
             // 🔄 Om grafen redan finns, uppdatera den
             if (priceChart) {
