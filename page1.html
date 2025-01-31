@@ -72,12 +72,11 @@
 
                 return data.map(item => {
                     let spotpris = Math.round(parseFloat(item.SEK_per_kWh) * 100); // Pris i öre/kWh
-                    let tibberPaslag = 8.6; // Tibbers påslag (8,6 öre)
-                    let energiskatt = 39.2; // Energiskatt (39,2 öre/kWh)
+                    let tibberPaslag = 8.6; // Tibbers påslag (8,6 öre/kWh)
                     let moms = 1.25; // 25% moms
 
-                    // 🟢 RÄTT BERÄKNING
-                    let totalpris = Math.round((spotpris + energiskatt) * moms + tibberPaslag); 
+                    // 🟢 Korrekt beräkning enligt Tibber
+                    let totalpris = Math.round((spotpris * moms) + tibberPaslag);
                     return totalpris;
                 });
             } catch (error) {
@@ -97,7 +96,7 @@
                 data: {
                     labels: Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`),
                     datasets: [{
-                        label: 'Elpris SE3 (öre/kWh, inkl. skatter & avgifter)',
+                        label: 'Elpris SE3 (öre/kWh, inkl. avgifter)',
                         data: prices,
                         backgroundColor: prices.map((_, index) =>
                             index === currentHour ? 'red' : 'orange'
@@ -161,14 +160,6 @@
 
         // 🔄 Uppdatera grafen vid sidladdning
         updateChart();
-        // 🔄 Uppdatera grafen varje hel och halv timme
-        const now = new Date();
-        const minutes = now.getMinutes();
-        const msToNextUpdate = ((30 - (minutes % 30)) * 60 - now.getSeconds()) * 1000;
-        setTimeout(() => {
-            updateChart();
-            setInterval(updateChart, 1800000); // Var 30:e minut
-        }, msToNextUpdate);
     </script>
 </body>
 </html>
