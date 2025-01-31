@@ -44,7 +44,7 @@
     <div id="currentPrice">Hämtar elpris...</div>
 
     <script>
-        let priceChart; // Globala variabeln för grafen
+        let priceChart;
 
         // 🕒 Uppdatera tid och datum
         function updateDateTime() {
@@ -57,19 +57,29 @@
 
         // ⚡ Hämta elpriser från API
         async function fetchElectricityPrices() {
-            const url = "https://www.elprisetjustnu.se/api/v1/prices/2025/01-30_SE3.json"; // 🔥 Korrekt API-länk
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const url = `https://www.elprisetjustnu.se/api/v1/prices/${year}/${month}-${day}_SE3.json`;
 
             try {
                 const response = await fetch(url);
                 if (!response.ok) throw new Error(`HTTP-fel! Status: ${response.status}`);
                 const data = await response.json();
 
-                console.log("📊 API-data mottagen:", data); // 🔎 Logga API-datan i konsolen
+                console.log("📊 API-data mottagen:", data);
 
-                return data.map(item => parseFloat(item.SEK_per_kWh) * 100); // ✅ RÄTT nyckel + omvandling till öre
+                return data.map(item => {
+                    let pris = parseFloat(item.SEK_per_kWh) * 100; // Pris i öre/kWh
+                    pris += 8.6; // Tibbers påslag (8,6 öre)
+                    pris += 54.875; // Energiskatt (54,875 öre)
+                    pris *= 1.25; // Lägg på 25% moms
+                    return pris;
+                });
             } catch (error) {
                 console.error('❌ Fel vid hämtning av elpriser:', error);
-                return Array(24).fill(0); // Om API:t misslyckas, fyll med 0
+                return Array(24).fill(0);
             }
         }
 
@@ -84,10 +94,10 @@
                 data: {
                     labels: Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`),
                     datasets: [{
-                        label: 'Elpris SE3 (öre/kWh)',
+                        label: 'Elpris SE3 (öre/kWh, inkl. skatter & avgifter)',
                         data: prices,
                         backgroundColor: prices.map((_, index) =>
-                            index === currentHour ? 'red' : 'gray'
+                            index === currentHour ? 'red' : 'orange'
                         ),
                         borderColor: 'white',
                         borderWidth: 1
@@ -120,12 +130,12 @@
             
             if (!prices || prices.length === 0 || prices.some(isNaN)) {
                 console.warn("⚠️ Inga priser från API – använder testdata!");
-                prices = Array.from({ length: 24 }, () => Math.floor(Math.random() * 200)); // Slumpade priser 0-200 öre
+                prices = Array.from({ length: 24 }, () => Math.floor(Math.random() * 200));
             }
 
             const now = new Date();
             const currentHour = now.getHours();
-            const currentPrice = prices[currentHour] || 0; // Om fel, visa 0 öre
+            const currentPrice = prices[currentHour] || 0;
 
             // 🔥 Uppdatera texten med aktuellt elpris
             document.getElementById('currentPrice').innerText = `${currentPrice.toFixed(1)} öre/kWh`;
@@ -134,18 +144,17 @@
             if (priceChart) {
                 priceChart.data.datasets[0].data = prices;
                 priceChart.data.datasets[0].backgroundColor = prices.map((_, index) =>
-                    index === currentHour ? 'red' : 'gray'
+                    index === currentHour ? 'red' : 'orange'
                 );
                 priceChart.update();
             } else {
-                // 🆕 Skapa grafen om den inte finns
                 createChart(prices);
             }
         }
 
         // ⏰ Uppdatera tid vid sidladdning
         updateDateTime();
-        setInterval(updateDateTime, 60000); // Varje minut
+        setInterval(updateDateTime, 60000);
 
         // 🔄 Uppdatera grafen vid sidladdning
         updateChart();
